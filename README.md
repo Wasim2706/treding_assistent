@@ -138,16 +138,19 @@ Trading Asistent/
 
 ## Development Roadmap & Phases
 
-- [x] **Phase 1: Foundation & Core Architecture** *(Current Release)*
+- [x] **Phase 1: Foundation & Core Architecture**
   - FastAPI backend with async database support (PostgreSQL ready + SQLite zero-config fallback)
   - Full ORM schema (14 tables with indexes on `published_at`, `symbol`, `event_type`, `created_at`)
   - Indian market sector sensitivity matrix & NIFTY 50 seed data
-  - Automated test suite (16 tests, 100% passing)
   - Next.js 14 responsive trading terminal dashboard (8 responsive pages)
   - Mandatory safety rules & prohibited phrase validation engine
-- [ ] **Phase 2: Modular News Engine & Deduplication**
-  - Live adapters for NewsAPI, Finnhub, AlphaVantage, and Indian RSS feeds (Moneycontrol, Livemint)
-  - URL normalization and SHA-256 fingerprinting deduplication pipeline
+- [x] **Phase 2: Modular News Engine & Deduplication** *(Current Release)*
+  - AbstractNewsProvider interface with RSS, NewsAPI, and Mock providers
+  - Multi-feed RSS scraper (Moneycontrol, Economic Times, Livemint, Business Standard)
+  - Deduplication pipeline: URL tracking parameter stripping, title token similarity (Jaccard), and SHA-256 fingerprinting
+  - Section 5 News classification & Indian equity ticker extraction
+  - Preliminary sentiment and market impact pre-scoring gate
+  - Automated test suite (31 tests, 100% passing)
 - [ ] **Phase 3: OpenAI Structured Analysis & Fact vs. Speculation**
   - GPT-4o-mini structured JSON extraction with schema adherence
   - Explicit separation of confirmed facts, interpretation, and speculation

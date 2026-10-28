@@ -79,3 +79,13 @@ async def test_settings_weights_update(async_client):
     }
     bad_resp = await async_client.put("/api/v1/settings/weights", json=bad_payload)
     assert bad_resp.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_trigger_news_refresh_api(async_client):
+    response = await async_client.post("/api/v1/news/refresh")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert "articles_fetched" in data["data"]
+    assert "articles_stored" in data["data"]

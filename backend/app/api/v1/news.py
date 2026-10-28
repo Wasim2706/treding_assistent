@@ -29,6 +29,9 @@ async def list_news(
         selectinload(NewsArticle.entities)
     ).order_by(desc(NewsArticle.published_at))
 
+    if symbol:
+        from app.models.news import NewsEntity
+        query = query.join(NewsArticle.entities).where(NewsEntity.entity_name == symbol.upper())
     if event_type:
         query = query.join(NewsArticle.analysis).where(NewsAnalysis.event_type == event_type)
     if min_impact:

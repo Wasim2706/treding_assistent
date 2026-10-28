@@ -8,51 +8,10 @@ from app.models.system import SystemLog
 
 async def run_news_intelligence_cycle() -> Dict[str, Any]:
     """
-    Executes the 5-minute news collection, deduplication, AI analysis, and alerting pipeline.
-    Resilient: catches exceptions, logs duration and statistics to system_logs.
+    Executes the 5-minute news collection, deduplication, classification, and alerting pipeline.
     """
-    start_time = time.time()
-    logger.info("Starting 5-minute news intelligence cycle...")
-
-    fetched_count = 0
-    filtered_count = 0
-    analyzed_count = 0
-    signals_count = 0
-    errors_count = 0
-
-    try:
-        # In Phase 2+, this calls the modular NewsProviderRegistry & AI analyzer.
-        # For Phase 1 baseline, we execute the resilient pipeline structure.
-        pass
-    except Exception as exc:
-        errors_count += 1
-        logger.error(f"Error in news intelligence cycle: {str(exc)}", exc_info=True)
-
-    duration_ms = round((time.time() - start_time) * 1000, 2)
-
-    # Persist execution log to system_logs
-    async with AsyncSessionLocal() as session:
-        log_entry = SystemLog(
-            job_name="news_intelligence_cycle_5m",
-            duration_ms=duration_ms,
-            articles_fetched=fetched_count,
-            articles_filtered=filtered_count,
-            articles_analyzed=analyzed_count,
-            signals_generated=signals_count,
-            errors_count=errors_count,
-            details={"status": "completed" if errors_count == 0 else "completed_with_errors"}
-        )
-        session.add(log_entry)
-        await session.commit()
-
-    logger.info(f"News intelligence cycle finished in {duration_ms}ms (Errors: {errors_count})")
-    return {
-        "status": "success" if errors_count == 0 else "partial_error",
-        "duration_ms": duration_ms,
-        "articles_fetched": fetched_count,
-        "articles_analyzed": analyzed_count,
-        "errors": errors_count
-    }
+    from app.services.news.engine import news_engine
+    return await news_engine.run_cycle()
 
 
 async def run_signal_generation_cycle() -> Dict[str, Any]:
