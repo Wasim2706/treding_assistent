@@ -76,17 +76,12 @@ class NewsIntelligenceEngine:
 
                 logger.info(f"Deduplication completed: {len(unique_articles)} novel articles retained, {filtered_count} duplicates rejected.")
 
-                # 4. CLASSIFY & SCORE & STORE
+                # 4. CLASSIFY & PRE-SCORE
                 for article in unique_articles:
-                    # Classify categories
                     categories = classify_news_categories(article.title, article.description or "")
                     article.categories = categories
-
-                    # Extract affected Indian stocks
                     tickers = extract_affected_tickers(article.title, article.description or "")
                     article.tickers = tickers
-
-                    # Estimate preliminary sentiment and impact
                     sentiment, impact = estimate_sentiment_and_impact(
                         article.title,
                         article.description or "",
@@ -96,14 +91,37 @@ class NewsIntelligenceEngine:
                     article.sentiment = sentiment
                     article.preliminary_impact_score = impact
 
-                    # Primary event type
-                    primary_event = categories[0] if categories else "General"
+                # 5. COST-CONTROL PRE-FILTER (Section 20)
+                from app.services.ai.cost_control import filter_high_value_articles, is_ai_budget_available
+                from app.services.ai.client import ai_analyzer
 
-                    # Check if high impact alert should be triggered
+                budget_ok = await is_ai_budget_available()
+                high_value, standard_value = filter_high_value_articles(unique_articles)
+
+                # Process high-value articles with OpenAI if budget allows, else deterministic
+                ai_results = {}
+                for article in high_value:
+                    if budget_ok and ai_analyzer.is_configured:
+                        ai_results[article.fingerprint] = await ai_analyzer.analyze_article(article)
+                    else:
+                        ai_results[article.fingerprint] = ai_analyzer._generate_deterministic_analysis(article)
+
+                for article in standard_value:
+                    ai_results[article.fingerprint] = ai_analyzer._generate_deterministic_analysis(article)
+
+                # 6. STORE ARTICLES, AI ANALYSIS, AND ENTITIES
+                for article in unique_articles:
+                    analysis_res = ai_results.get(article.fingerprint) or ai_analyzer._generate_deterministic_analysis(article)
+                    final_impact = analysis_res.impact_score
+                    final_sentiment = analysis_res.sentiment
+                    final_tickers = list(set(article.tickers + analysis_res.affected_stocks))
+                    final_sectors = list(set(article.sectors + analysis_res.affected_sectors))
+                    primary_event = analysis_res.event_type
+
                     should_alert = (
-                        impact >= settings.ALERT_IMPACT_THRESHOLD
+                        final_impact >= settings.ALERT_IMPACT_THRESHOLD
                         and article.source_reliability_score >= 75
-                        and (len(tickers) > 0 or "RBI" in categories or "Crude oil" in categories or "War/conflict" in categories)
+                        and (len(final_tickers) > 0 or primary_event in ["RBI", "Crude oil", "War/conflict", "Earnings", "Interest rates"])
                     )
 
                     # Persist NewsArticle
@@ -126,31 +144,28 @@ class NewsIntelligenceEngine:
                     session.add(db_article)
                     await session.flush()
 
-                    # Persist NewsAnalysis
-                    affected_indices = ["NIFTY 50"] if any(c in categories for c in ["RBI", "Interest rates", "Crude oil", "GDP"]) else []
-                    if "Banking" in categories or "RBI" in categories:
-                        affected_indices.append("BANK NIFTY")
-
-                    analysis = NewsAnalysis(
+                    # Persist NewsAnalysis with strict fact vs speculation breakdown
+                    analysis_row = NewsAnalysis(
                         article_id=db_article.id,
-                        summary=article.description or article.title,
+                        summary=analysis_res.summary,
                         event_type=primary_event,
-                        sentiment=sentiment,
-                        impact_score=impact,
-                        confidence=article.source_reliability_score,
-                        time_horizon="INTRADAY" if impact >= 75 else "SHORT_TERM",
-                        affected_sectors=article.sectors,
-                        affected_stocks=tickers,
-                        affected_indices=affected_indices,
-                        reasoning=f"Categorized under {primary_event} with {sentiment} market bias. Mentioned tickers: {', '.join(tickers) if tickers else 'Broad Market'}.",
-                        confirmed_facts=[article.title],
-                        market_interpretation=f"Potential {sentiment.lower()} reaction across relevant Indian equities.",
-                        risk_factors=["Broader index volatility", "Market gap-open risk"]
+                        sentiment=final_sentiment,
+                        impact_score=final_impact,
+                        confidence=analysis_res.confidence,
+                        time_horizon=analysis_res.time_horizon,
+                        affected_sectors=final_sectors,
+                        affected_stocks=final_tickers,
+                        affected_indices=analysis_res.affected_indices,
+                        reasoning=analysis_res.reasoning,
+                        risk_factors=analysis_res.risk_factors,
+                        confirmed_facts=analysis_res.confirmed_facts,
+                        market_interpretation=analysis_res.market_interpretation,
+                        speculation=analysis_res.speculation
                     )
-                    session.add(analysis)
+                    session.add(analysis_row)
 
                     # Persist NewsEntities
-                    for ticker in tickers:
+                    for ticker in final_tickers:
                         ent = NewsEntity(
                             article_id=db_article.id,
                             entity_name=ticker,
@@ -159,7 +174,7 @@ class NewsIntelligenceEngine:
                         )
                         session.add(ent)
 
-                    for cat in categories:
+                    for cat in article.categories:
                         ent = NewsEntity(
                             article_id=db_article.id,
                             entity_name=cat,
