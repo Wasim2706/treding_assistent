@@ -202,6 +202,11 @@ class NewsIntelligenceEngine:
                             }
                         )
                         session.add(alert_record)
+                        try:
+                            from app.services.telegram.bot import telegram_bot_service
+                            asyncio.create_task(telegram_bot_service.broadcast_breaking_news(db_article, analysis_row))
+                        except Exception:
+                            pass
 
                     stored_count += 1
 

@@ -213,6 +213,14 @@ class SignalGenerator:
         db.add(signal)
         await db.commit()
         await db.refresh(signal)
+
+        if signal.direction in ("BUY", "SELL") and signal.composite_score >= 70.0:
+            try:
+                from app.services.telegram.bot import telegram_bot_service
+                asyncio.create_task(telegram_bot_service.broadcast_signal(signal))
+            except Exception:
+                pass
+
         return signal
 
     async def run_cycle(self, db: AsyncSession, limit: int = 20) -> List[Signal]:
