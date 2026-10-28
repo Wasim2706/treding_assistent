@@ -1,0 +1,100 @@
+services:
+  # 1. FastAPI Web Service
+  - type: web
+    name: indian-trading-backend
+    env: python
+    region: oregon
+    plan: standard
+    buildCommand: "pip install -r backend/requirements.txt greenlet"
+    startCommand: "cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    healthCheckPath: /health
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: PAPER_TRADING_ONLY
+        value: "true"
+      - key: REAL_ORDERS_ENABLED
+        value: "false"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: indian-trading-postgres
+          property: connectionString
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: NEWS_API_KEY
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false
+
+  # 2. Persistent Background Worker (5-minute cycle & intelligence)
+  - type: worker
+    name: indian-trading-worker
+    env: python
+    region: oregon
+    plan: starter
+    buildCommand: "pip install -r backend/requirements.txt greenlet"
+    startCommand: "cd backend && python -m app.workers.scheduler"
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: PAPER_TRADING_ONLY
+        value: "true"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: indian-trading-postgres
+          property: connectionString
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: NEWS_API_KEY
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false
+
+  # 3. Next.js Web Dashboard
+  - type: web
+    name: indian-trading-dashboard
+    env: node
+    region: oregon
+    plan: starter
+    buildCommand: "cd frontend && npm install && npm run build"
+    startCommand: "cd frontend && npm start"
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        fromService:
+          name: indian-trading-backend
+          type: web
+          property: host
+
+  # 4. Render Cron Job (Indian Pre-Market Report at 08:30 IST / 03:00 UTC)
+  - type: cron
+    name: daily-indian-premarket-report
+    env: python
+    region: oregon
+    schedule: "0 3 * * 1-5"
+    buildCommand: "pip install -r backend/requirements.txt greenlet"
+    startCommand: "cd backend && python -c 'import asyncio; from app.workers.tasks import run_pre_market_report_generation; asyncio.run(run_pre_market_report_generation())'"
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: indian-trading-postgres
+          property: connectionString
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false
+
+databases:
+  # Managed PostgreSQL
+  - name: indian-trading-postgres
+    region: oregon
+    plan: starter
+    databaseName: indian_trading_db
+    user: trading_user
