@@ -30,7 +30,14 @@ class MarketDataService:
         quote_ttl_sec: int = 60,
         indicator_ttl_sec: int = 300
     ):
-        self._provider = primary_provider or YahooFinanceProvider()
+        from app.core.config import settings
+        if primary_provider is not None:
+            self._provider = primary_provider
+        elif getattr(settings, "ENVIRONMENT", "") == "testing":
+            self._provider = MockMarketDataProvider()
+        else:
+            self._provider = YahooFinanceProvider()
+
         self._mock_provider = MockMarketDataProvider()
         self._quote_ttl = timedelta(seconds=quote_ttl_sec)
         self._indicator_ttl = timedelta(seconds=indicator_ttl_sec)
@@ -38,6 +45,15 @@ class MarketDataService:
         # In-memory TTL caches: { symbol: (timestamp, data) }
         self._quote_cache: Dict[str, tuple[datetime, Dict[str, Any]]] = {}
         self._indicator_cache: Dict[str, tuple[datetime, Dict[str, Any]]] = {}
+
+    def set_mock_price(self, symbol: str, price: float) -> None:
+        """Sets price in mock provider and clears cache (useful for testing)."""
+        clean = clean_ticker(symbol)
+        self._quote_cache.pop(clean, None)
+        if hasattr(self._provider, "set_price"):
+            self._provider.set_price(clean, price)
+        if hasattr(self._mock_provider, "set_price"):
+            self._mock_provider.set_price(clean, price)
 
     async def get_market_status(self) -> Dict[str, Any]:
         """Returns the current trading session status for NSE/BSE."""

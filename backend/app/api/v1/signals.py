@@ -1,5 +1,5 @@
 from typing import Optional, List
-from fastapi import APIRouter, Depends, Query, HTTPException, status
+from fastapi import APIRouter, Depends, Query, HTTPException, status, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 
@@ -68,7 +68,7 @@ async def get_top_signals(limit: int = Query(5, ge=1, le=20), db: AsyncSession =
 
 @router.post("/generate", response_model=APIResponse[dict])
 async def trigger_signal_generation(
-    request: SignalGenerateRequest = None,
+    request: Optional[SignalGenerateRequest] = Body(None),
     db: AsyncSession = Depends(get_db)
 ):
     """

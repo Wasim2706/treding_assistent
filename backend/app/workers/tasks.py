@@ -17,16 +17,30 @@ async def run_news_intelligence_cycle() -> Dict[str, Any]:
 async def run_signal_generation_cycle() -> Dict[str, Any]:
     """
     Deterministic signal engine combining news score, technical indicators, and sector trends.
+    Also updates open paper trading positions against live market prices.
     """
+    from app.services.signals.generator import signal_generator
+    from app.services.paper_trading.engine import paper_trading_engine
+
     start_time = time.time()
-    logger.info("Executing signal synthesis cycle...")
-    signals_generated = 0
+    logger.info("Executing multi-factor signal synthesis and paper position management...")
+
+    async with AsyncSessionLocal() as db:
+        signals = await signal_generator.run_cycle(db)
+        position_updates = await paper_trading_engine.update_open_positions(db)
+
     duration_ms = round((time.time() - start_time) * 1000, 2)
+    logger.info(
+        f"Signal cycle complete: {len(signals)} signals generated, "
+        f"{position_updates.get('open_positions_evaluated', 0)} paper positions tracked in {duration_ms}ms"
+    )
 
     return {
         "status": "success",
         "duration_ms": duration_ms,
-        "signals_generated": signals_generated
+        "signals_generated": len(signals),
+        "paper_positions_evaluated": position_updates.get("open_positions_evaluated", 0),
+        "paper_positions_closed": position_updates.get("closed_trades", 0),
     }
 
 

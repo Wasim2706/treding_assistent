@@ -64,6 +64,7 @@ export interface TradingSignal {
   invalidated_if: string;
   technical_confirmation: string;
   status: string;
+  is_paper_traded?: boolean;
   created_at: string;
 }
 

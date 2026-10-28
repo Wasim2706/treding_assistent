@@ -49,6 +49,12 @@ export const api = {
   getPaperPositions: () => fetchJson<any>("/api/v1/paper-trading/positions"),
   getPaperTrades: () => fetchJson<any>("/api/v1/paper-trading/trades"),
   getPaperMetrics: () => fetchJson<any>("/api/v1/paper-trading/metrics"),
+  executePaperTradeFromSignal: (signalId: number) => 
+    fetchJson<any>(`/api/v1/paper-trading/execute-signal/${signalId}`, { method: "POST" }),
+  closePaperPosition: (tradeId: number, exitPrice?: number) => 
+    fetchJson<any>(`/api/v1/paper-trading/close/${tradeId}${exitPrice ? `?exit_price=${exitPrice}` : ""}`, { method: "POST" }),
+  updatePaperPositions: () => 
+    fetchJson<any>("/api/v1/paper-trading/update-positions", { method: "POST" }),
   
   getLatestPreMarketReport: () => fetchJson<any>("/api/v1/reports/pre-market/latest"),
   generatePreMarketReport: () => fetchJson<any>("/api/v1/reports/pre-market/generate", { method: "POST" }),

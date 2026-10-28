@@ -60,6 +60,7 @@ class MockMarketDataProvider(AbstractMarketDataProvider):
     def __init__(self, seed: Optional[int] = 42):
         self._seed = seed
         self._base_prices = BASE_PRICES.copy()
+        self._overrides: Dict[str, float] = {}
 
     @property
     def name(self) -> str:
@@ -68,10 +69,30 @@ class MockMarketDataProvider(AbstractMarketDataProvider):
     def set_price(self, symbol: str, price: float) -> None:
         """Helper to override price for controlled test scenarios."""
         clean = clean_ticker(symbol)
+        self._overrides[clean] = price
         self._base_prices[clean] = price
 
     async def get_latest_price(self, symbol: str) -> Dict[str, Any]:
         clean = clean_ticker(symbol)
+        if clean in self._overrides:
+            exact_price = self._overrides[clean]
+            prev_close = self._base_prices.get(clean, exact_price)
+            change = round(exact_price - prev_close, 2)
+            change_pct = round((change / prev_close) * 100.0, 2) if prev_close > 0 else 0.0
+            return {
+                "symbol": clean,
+                "ticker": normalize_ticker(symbol),
+                "last_price": exact_price,
+                "change": change,
+                "change_pct": change_pct,
+                "open_price": exact_price,
+                "high_price": exact_price,
+                "low_price": exact_price,
+                "prev_close": prev_close,
+                "volume": 1000000,
+                "timestamp": datetime.now(timezone.utc),
+            }
+
         base = self._base_prices.get(clean, 1000.0)
 
         # Minor variance for realistic simulation (+- 0.8%)

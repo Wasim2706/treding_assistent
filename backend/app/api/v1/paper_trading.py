@@ -5,9 +5,9 @@ from sqlalchemy import select, desc
 
 from app.core.database import get_db
 from app.models.paper_trading import PaperTrade
-from app.models.signal import Signal
 from app.schemas.paper_trading import PaperTradeCreate, PaperTradeRead, PaperTradingMetrics
 from app.schemas.common import APIResponse, PaginatedResponse
+from app.services.paper_trading.engine import paper_trading_engine
 
 router = APIRouter(prefix="/paper-trading", tags=["Paper Trading Simulation"])
 
@@ -54,60 +54,62 @@ async def list_all_trades(
 @router.get("/metrics", response_model=APIResponse[PaperTradingMetrics])
 async def get_paper_metrics(db: AsyncSession = Depends(get_db)):
     """Calculates win rate, profit factor, drawdown, and P&L across paper trades."""
-    res = await db.execute(select(PaperTrade))
-    all_trades = res.scalars().all()
-
-    total = len(all_trades)
-    open_p = sum(1 for t in all_trades if t.status == "OPEN")
-    closed = sum(1 for t in all_trades if t.status != "OPEN")
-    winning = sum(1 for t in all_trades if t.realized_pnl > 0)
-    losing = sum(1 for t in all_trades if t.realized_pnl < 0)
-
-    win_rate = (winning / closed * 100) if closed > 0 else 0.0
-    loss_rate = (losing / closed * 100) if closed > 0 else 0.0
-    total_realized = sum(t.realized_pnl for t in all_trades)
-    total_unrealized = sum(t.unrealized_pnl for t in all_trades if t.status == "OPEN")
-
-    gross_profit = sum(t.realized_pnl for t in all_trades if t.realized_pnl > 0)
-    gross_loss = abs(sum(t.realized_pnl for t in all_trades if t.realized_pnl < 0))
-    profit_factor = (gross_profit / gross_loss) if gross_loss > 0 else (gross_profit if gross_profit > 0 else 1.0)
-
-    avg_return = (sum(t.pnl_percentage for t in all_trades if t.status != "OPEN") / closed) if closed > 0 else 0.0
-
-    metrics = PaperTradingMetrics(
-        total_trades=total,
-        open_positions=open_p,
-        closed_trades=closed,
-        winning_trades=winning,
-        losing_trades=losing,
-        win_rate_pct=round(win_rate, 2),
-        loss_rate_pct=round(loss_rate, 2),
-        total_realized_pnl=round(total_realized, 2),
-        total_unrealized_pnl=round(total_unrealized, 2),
-        profit_factor=round(profit_factor, 2),
-        average_trade_return_pct=round(avg_return, 2),
-        max_drawdown_pct=0.0
-    )
+    metrics = await paper_trading_engine.get_metrics(db)
     return APIResponse(data=metrics, message="Calculated paper trading performance metrics")
 
 
 @router.post("/open", response_model=APIResponse[PaperTradeRead])
 async def open_virtual_trade(trade: PaperTradeCreate, db: AsyncSession = Depends(get_db)):
     """Opens a virtual position in Paper Trading mode."""
-    new_trade = PaperTrade(
-        signal_id=trade.signal_id,
-        symbol=trade.symbol.upper(),
-        direction=trade.direction.upper(),
-        quantity=trade.quantity,
+    new_trade = await paper_trading_engine.open_manual_trade(
+        symbol=trade.symbol,
+        direction=trade.direction,
         entry_price=trade.entry_price,
-        current_price=trade.entry_price,
         stop_loss=trade.stop_loss,
         target_1=trade.target_1,
         target_2=trade.target_2,
-        status="OPEN",
-        notes=trade.notes
+        quantity=trade.quantity,
+        notes=trade.notes,
+        db=db
     )
-    db.add(new_trade)
-    await db.commit()
-    await db.refresh(new_trade)
     return APIResponse(data=new_trade, message="Virtual paper position opened.")
+
+
+@router.post("/execute-signal/{signal_id}", response_model=APIResponse[PaperTradeRead])
+async def execute_signal_as_paper_trade(signal_id: int, db: AsyncSession = Depends(get_db)):
+    """Automatically sizes and opens a virtual paper position from an actionable Signal."""
+    try:
+        trade = await paper_trading_engine.open_position_from_signal(signal_id=signal_id, db=db)
+        return APIResponse(data=trade, message=f"Virtual trade executed for Signal #{signal_id}")
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.post("/close/{trade_id}", response_model=APIResponse[PaperTradeRead])
+async def close_paper_trade(
+    trade_id: int,
+    exit_price: Optional[float] = Query(None),
+    reason: str = Query("MANUAL_EXIT"),
+    db: AsyncSession = Depends(get_db)
+):
+    """Manually closes an active virtual trade."""
+    try:
+        closed = await paper_trading_engine.close_position_manually(
+            trade_id=trade_id,
+            db=db,
+            exit_price=exit_price,
+            reason=reason
+        )
+        return APIResponse(data=closed, message=f"Virtual position #{trade_id} closed successfully.")
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.post("/update-positions", response_model=APIResponse[dict])
+async def update_active_positions(
+    force_eod: bool = Query(False),
+    db: AsyncSession = Depends(get_db)
+):
+    """Refreshes open positions against market prices, checking T1, T2, SL, and trailing stops."""
+    result = await paper_trading_engine.update_open_positions(db=db, force_eod_squareoff=force_eod)
+    return APIResponse(data=result, message="Open paper positions evaluated against market prices.")
