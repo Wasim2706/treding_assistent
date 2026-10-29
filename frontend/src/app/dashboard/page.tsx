@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Link from "next/link";
 import {
   TrendingUp,
   TrendingDown,
@@ -10,6 +11,7 @@ import {
   Clock,
   ExternalLink,
   ChevronRight,
+  FileText,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { TradingSignal, PaperTradingMetrics, DailyReport } from "@/lib/types";
@@ -200,29 +202,45 @@ export default function DashboardPage() {
                     </span>
                   </div>
                   <div className="text-slate-400 text-[11px]">
-                    Levels: {preMarketReport.nifty_outlook?.levels || "24,400 - 24,650"}
+                    Levels: {preMarketReport.nifty_outlook?.levels || "24,700 - 25,000"}
                   </div>
                 </div>
 
                 <div className="p-3 rounded-lg bg-slate-950 border border-slate-800">
                   <div className="flex items-center justify-between mb-1">
                     <span className="font-semibold text-white">BANK NIFTY</span>
-                    <span className="text-emerald-400 font-bold uppercase">
+                    <span className="text-blue-400 font-bold uppercase">
                       {preMarketReport.bank_nifty_outlook?.sentiment || "NEUTRAL"}
                     </span>
                   </div>
                   <div className="text-slate-400 text-[11px]">
-                    Levels: {preMarketReport.bank_nifty_outlook?.levels || "51,800 - 52,400"}
+                    Levels: {preMarketReport.bank_nifty_outlook?.levels || "51,900 - 52,800"}
                   </div>
                 </div>
 
                 <div className="text-slate-400 text-[11px] leading-relaxed">
-                  <strong>Risk Watch:</strong> Crude oil fluctuations, US bond yields, and weekly options expiry.
+                  <strong>Risk Watch:</strong> Crude oil fluctuations, US bond yields, and opening volatility buffer (09:15-09:30).
                 </div>
+
+                <Link
+                  href="/reports"
+                  className="flex items-center justify-center gap-1.5 w-full py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 rounded-lg font-semibold text-xs transition"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>View Full Pre-Market Report</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </Link>
               </div>
             ) : (
-              <div className="p-4 rounded-lg bg-slate-950 border border-slate-800 text-center text-xs text-slate-500">
-                Pre-market report not generated yet for today. Use Reports page to generate.
+              <div className="p-4 rounded-lg bg-slate-950 border border-slate-800 text-center text-xs text-slate-500 space-y-3">
+                <div>Pre-market report not generated yet for today.</div>
+                <Link
+                  href="/reports"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-semibold rounded text-xs transition"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>Open Reports Desk</span>
+                </Link>
               </div>
             )}
           </div>

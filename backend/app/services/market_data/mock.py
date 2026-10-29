@@ -45,7 +45,18 @@ BASE_PRICES: Dict[str, float] = {
     # Benchmarks & Indices
     "^NSEI": 24850.0,
     "^NSEBANK": 52400.0,
+    "^DJI": 42500.0,
+    "^GSPC": 5820.0,
+    "^IXIC": 18500.0,
+    "NQ=F": 20400.0,
+    "^FTSE": 8250.0,
+    "^GDAXI": 19450.0,
+    "^N225": 38900.0,
+    "^HSI": 20600.0,
+    "^TNX": 4.25,
+    "GIFTI.NS": 24920.0,
     "CL=F": 78.40,
+    "BZ=F": 82.20,
     "GC=F": 2680.0,
     "INR=X": 84.10,
 }

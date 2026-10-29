@@ -34,7 +34,9 @@ async def test_news_engine_cycle_and_persistence(db_session):
     assert len(stock_entities) > 0
 
     # Verify alerts table received high impact alerts
-    res_alerts = await db_session.execute(select(Alert))
+    res_alerts = await db_session.execute(
+        select(Alert).where(Alert.alert_type == "HIGH_IMPACT_NEWS")
+    )
     alerts = res_alerts.scalars().all()
     assert len(alerts) > 0
     assert all(a.impact_score >= 70 for a in alerts)

@@ -105,29 +105,89 @@ export interface DailyReport {
   report_date: string;
   report_type: string;
   title: string;
-  global_overnight_summary: Record<string, any>;
+  global_overnight_summary: {
+    sentiment?: string;
+    avg_us_change_pct?: number;
+    gift_nifty_change_pct?: number;
+    crude_change_pct?: number;
+    summary_narrative?: string;
+    instruments?: Record<string, {
+      symbol?: string;
+      last_price?: number;
+      change?: number;
+      change_pct?: number;
+    }>;
+  };
   top_global_events: Array<{
     headline: string;
     summary: string;
+    source?: string;
+    sentiment?: string;
     impact_score: number;
     confidence: number;
-    affected_sectors: string[];
-    affected_stocks: string[];
+    confirmed_facts?: string[];
+    market_interpretation?: string[];
+    speculation?: string[];
+    affected_sectors?: string[];
+    affected_stocks?: string[];
   }>;
   nifty_outlook: {
-    sentiment: string;
-    levels: string;
-    catalysts: string[];
+    symbol?: string;
+    last_price?: number;
+    change_pct?: number;
+    sentiment?: string;
+    expected_open?: string;
+    pivot?: number;
+    support_1?: number;
+    support_2?: number;
+    resistance_1?: number;
+    resistance_2?: number;
+    rsi?: number;
+    trend_bias?: string;
+    levels?: string;
+    catalysts?: string[];
   };
   bank_nifty_outlook: {
-    sentiment: string;
-    levels: string;
-    catalysts: string[];
+    symbol?: string;
+    last_price?: number;
+    change_pct?: number;
+    sentiment?: string;
+    expected_open?: string;
+    pivot?: number;
+    support_1?: number;
+    support_2?: number;
+    resistance_1?: number;
+    resistance_2?: number;
+    rsi?: number;
+    trend_bias?: string;
+    levels?: string;
+    catalysts?: string[];
   };
-  top_watchlist: Array<any>;
-  no_trade_watchlist: Array<any>;
+  top_watchlist: Array<{
+    symbol: string;
+    direction: "BUY" | "SELL";
+    entry_zone: string;
+    entry_price?: number;
+    stop_loss?: number;
+    target_1?: number;
+    target_2?: number;
+    risk_reward: string;
+    composite_score: number;
+    confidence: number;
+    catalyst_rationale?: string;
+    technical_confirmation?: string;
+  }>;
+  no_trade_watchlist: Array<{
+    symbol: string;
+    reason: string;
+    composite_score?: number;
+    technical_rule_triggered?: string;
+  }>;
   risk_warnings: string[];
   markdown_content: string;
+  is_published?: boolean;
+  telegram_sent?: boolean;
+  created_at?: string;
 }
 
 export interface SystemHealth {

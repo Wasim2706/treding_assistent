@@ -172,6 +172,115 @@ class MarketDataService:
 
         return overview
 
+    async def get_global_market_cues(self) -> Dict[str, Any]:
+        """
+        Gathers comprehensive overnight global cues:
+        US markets, European indices, Asian cues, Commodities, Yields, and Currencies.
+        Calculates aggregate overnight directional bias for the Indian pre-open session.
+        """
+        cues_map = {
+            # US Indices
+            "dow_jones": "^DJI",
+            "sp500": "^GSPC",
+            "nasdaq": "NQ=F",
+            # European Indices
+            "ftse100": "^FTSE",
+            "dax": "^GDAXI",
+            # Asian & Offshore Cues
+            "gift_nifty": "GIFTI.NS",
+            "nikkei225": "^N225",
+            "hang_seng": "^HSI",
+            # Commodities
+            "crude_wti": "CL=F",
+            "crude_brent": "BZ=F",
+            "gold": "GC=F",
+            # Macro / FX
+            "us_10y_yield": "^TNX",
+            "usd_inr": "INR=X",
+        }
+
+        tasks = [self._provider.get_index_quote(ticker) for ticker in cues_map.values()]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        instruments: Dict[str, Dict[str, Any]] = {}
+        for (name, ticker), res in zip(cues_map.items(), results):
+            if isinstance(res, Exception):
+                quote = await self._mock_provider.get_index_quote(ticker)
+            else:
+                quote = res
+            if isinstance(quote, dict) and "timestamp" in quote and isinstance(quote["timestamp"], datetime):
+                quote = {**quote, "timestamp": quote["timestamp"].isoformat()}
+            instruments[name] = quote
+
+        # Calculate US aggregate momentum
+        us_changes = [
+            instruments.get(k, {}).get("change_pct", 0.0)
+            for k in ["dow_jones", "sp500", "nasdaq"]
+        ]
+        avg_us = sum(us_changes) / len(us_changes) if us_changes else 0.0
+
+        # GIFT Nifty cue
+        gift_change = instruments.get("gift_nifty", {}).get("change_pct", 0.0)
+
+        # Crude oil cue (Crude rise is bearish for India, crude fall is bullish)
+        crude_change = instruments.get("crude_wti", {}).get("change_pct", 0.0)
+
+        # Directional sentiment determination
+        score = 0
+        if avg_us > 0.3:
+            score += 1
+        elif avg_us < -0.3:
+            score -= 1
+
+        if gift_change > 0.2:
+            score += 1
+        elif gift_change < -0.2:
+            score -= 1
+
+        # Crude oil inverse relationship for Indian economy
+        if crude_change > 2.0:
+            score -= 1
+        elif crude_change < -2.0:
+            score += 1
+
+        if score >= 1:
+            sentiment = "BULLISH"
+        elif score <= -1:
+            sentiment = "BEARISH"
+        else:
+            sentiment = "NEUTRAL"
+
+        narrative_parts = []
+        if avg_us > 0.2:
+            narrative_parts.append(f"Wall Street closed positive (Avg {avg_us:+.2f}%)")
+        elif avg_us < -0.2:
+            narrative_parts.append(f"Wall Street closed weaker (Avg {avg_us:+.2f}%)")
+        else:
+            narrative_parts.append(f"US indices showed a flat-to-mixed closing ({avg_us:+.2f}%)")
+
+        if gift_change > 0.15:
+            narrative_parts.append(f"GIFT Nifty indicates a positive gap opening ({gift_change:+.2f}%)")
+        elif gift_change < -0.15:
+            narrative_parts.append(f"GIFT Nifty points toward a cautious/negative opening ({gift_change:+.2f}%)")
+        else:
+            narrative_parts.append("GIFT Nifty signals a flat open")
+
+        if abs(crude_change) >= 1.5:
+            direction_str = "spiked" if crude_change > 0 else "cooled down"
+            narrative_parts.append(f"Crude oil {direction_str} by {crude_change:+.2f}%")
+
+        summary_narrative = ". ".join(narrative_parts) + "."
+
+        return {
+            "sentiment": sentiment,
+            "avg_us_change_pct": round(avg_us, 2),
+            "gift_nifty_change_pct": round(gift_change, 2),
+            "crude_change_pct": round(crude_change, 2),
+            "instruments": instruments,
+            "summary_narrative": summary_narrative,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+
     async def refresh_all_snapshots(self, db: AsyncSession, limit: int = 30) -> int:
         """
         Refreshes technical snapshots for tracked stocks in the database.

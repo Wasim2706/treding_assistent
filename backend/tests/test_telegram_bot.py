@@ -41,7 +41,7 @@ async def test_telegram_command_handlers():
     assert "Paper-Trading Portfolio" in perf_msg
 
     rep_msg = await bot.handle_report()
-    assert "Report" in rep_msg
+    assert "report" in rep_msg.lower()
 
 
 @pytest.mark.asyncio

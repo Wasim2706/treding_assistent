@@ -186,18 +186,18 @@ class NewsIntelligenceEngine:
                     # Trigger alert if threshold met
                     if should_alert:
                         alerts_count += 1
-                        alert_msg = f"[{sentiment}] {article.title} (Impact: {impact}/100)"
+                        alert_msg = f"[{final_sentiment}] {article.title} (Impact: {final_impact}/100)"
                         alert_record = Alert(
                             title=f"Breaking Market Intelligence: {primary_event}",
                             message=alert_msg,
                             alert_type="HIGH_IMPACT_NEWS",
-                            impact_score=impact,
+                            impact_score=final_impact,
                             channel="WEB_DASHBOARD",
                             is_sent=True,
                             metadata_json={
                                 "article_id": db_article.id,
                                 "source": article.source,
-                                "tickers": tickers,
+                                "tickers": final_tickers,
                                 "url": article.url
                             }
                         )

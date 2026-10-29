@@ -222,3 +222,73 @@ def format_paper_positions_summary(positions: List[Any], metrics: Optional[Any] 
 
     msg += "⚠️ _Simulated virtual portfolio. Zero real capital deployed._"
     return msg
+
+
+def format_pre_market_report_message(report: Any) -> str:
+    """Formats the daily pre-market Indian market report for Telegram."""
+    date_str = getattr(report, "report_date", "Today")
+    title = getattr(report, "title", "Indian Pre-Market Intelligence Report")
+
+    overnight = getattr(report, "global_overnight_summary", {}) or {}
+    nifty = getattr(report, "nifty_outlook", {}) or {}
+    bank = getattr(report, "bank_nifty_outlook", {}) or {}
+    watchlist = getattr(report, "top_watchlist", []) or []
+    no_trade = getattr(report, "no_trade_watchlist", []) or []
+    risks = getattr(report, "risk_warnings", []) or []
+
+    sentiment = nifty.get("sentiment", overnight.get("sentiment", "NEUTRAL")).upper()
+    s_emoji = get_sentiment_emoji(sentiment)
+
+    lines = [
+        f"📑 *PRE-MARKET REPORT: {date_str}*",
+        f"*{title}*",
+        "━━━━━━━━━━━━━━━━━━━━━━",
+        f"🌐 *Global Overnight Sentiment:* {s_emoji} *{sentiment}*",
+        f"• {overnight.get('summary_narrative', 'Global indices trading within standard bands.')}",
+        "",
+        "🇮🇳 *Indian Benchmarks Outlook:*",
+        f"• *NIFTY 50:* {nifty.get('expected_open', 'Flat to Positive')}",
+        f"  Pivots: S1 `{nifty.get('support_1', '--')}` | Pivot `{nifty.get('pivot', '--')}` | R1 `{nifty.get('resistance_1', '--')}`",
+        f"• *BANK NIFTY:* {bank.get('expected_open', 'Neutral')}",
+        f"  Pivots: S1 `{bank.get('support_1', '--')}` | Pivot `{bank.get('pivot', '--')}` | R1 `{bank.get('resistance_1', '--')}`",
+        "",
+        "🎯 *Top High-Conviction Setups:*",
+    ]
+
+    if watchlist:
+        for item in watchlist[:4]:
+            sym = item.get("symbol", "")
+            d = item.get("direction", "BUY")
+            ez = item.get("entry_zone", "")
+            t1 = item.get("target_1", "")
+            sl = item.get("stop_loss", "")
+            score = item.get("composite_score", 0)
+            emoji = "🟢" if d == "BUY" else "🔴"
+            lines.append(f"{emoji} *{d} {sym}* (Score: {score}/100)")
+            lines.append(f"  Entry: `{ez}` | SL: `₹{sl}` | Target: `₹{t1}`")
+    else:
+        lines.append("• No high-conviction trade setups meet minimum filters today. Watchlist mode.")
+
+    lines.append("")
+    lines.append("🚫 *No-Trade Blocked Stocks:*")
+    if no_trade:
+        for item in no_trade[:3]:
+            sym = item.get("symbol", "")
+            reason = item.get("reason", "Technical or catalyst conflict")
+            lines.append(f"• *{sym}*: {reason}")
+    else:
+        lines.append("• No specific stocks blocked by severe conflicts.")
+
+    lines.append("")
+    lines.append("⚠️ *Actionable Risk Warnings:*")
+    if risks:
+        for r in risks[:3]:
+            lines.append(f"• {r}")
+    else:
+        lines.append("• Observe opening 15-min volatility (09:15-09:30 IST) before placing orders.")
+
+    lines.append("")
+    lines.append("⚠️ _Algorithmic paper trading & decision-support only. Not SEBI investment advice._")
+
+    return "\n".join(lines)
+

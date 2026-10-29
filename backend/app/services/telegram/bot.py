@@ -18,6 +18,7 @@ from app.services.telegram.formatter import (
     format_news_item,
     format_signal_alert,
     format_paper_positions_summary,
+    format_pre_market_report_message,
 )
 
 logger = logging.getLogger(__name__)
@@ -211,22 +212,18 @@ class TelegramBotService:
 
     async def handle_report(self, chat_id: Optional[str] = None) -> str:
         async with AsyncSessionLocal() as db:
-            res = await db.execute(select(DailyReport).order_by(desc(DailyReport.report_date)).limit(1))
+            res = await db.execute(
+                select(DailyReport)
+                .where(DailyReport.report_type == "PRE_MARKET")
+                .order_by(desc(DailyReport.created_at))
+                .limit(1)
+            )
             report = res.scalars().first()
 
             if not report:
-                msg = "📑 *Daily Pre-Market Report:*\nNo report generated yet today. The pre-market report generates automatically at 08:30 IST."
+                msg = "📑 *Daily Pre-Market Report:*\nNo report generated yet today. The pre-market report generates automatically at 08:30 IST or via `/report` trigger."
             else:
-                dt_str = report.report_date.strftime("%d %b %Y") if report.report_date else "Today"
-                msg = (
-                    f"📑 *PRE-MARKET REPORT ({dt_str})*\n"
-                    f"━━━━━━━━━━━━━━━━━━━━━━\n"
-                    f"• *Market Sentiment:* {report.overall_sentiment}\n"
-                    f"• *Overnight Summary:* {report.overnight_summary[:300]}...\n\n"
-                    f"🇮🇳 *Indian Outlook:* {report.nifty_outlook}\n\n"
-                    f"⚠️ *Risk Warnings:* {report.risk_factors}\n\n"
-                    f"⚠️ _Full report accessible on web dashboard._"
-                )
+                msg = format_pre_market_report_message(report)
 
             if chat_id:
                 await self.send_message(msg, chat_id=chat_id)
@@ -247,6 +244,11 @@ class TelegramBotService:
             return False
 
         msg = format_signal_alert(signal)
+        return await self.send_message(msg)
+
+    async def broadcast_pre_market_report(self, report: Any) -> bool:
+        """Dispatches formatted Indian market pre-open report to the broadcast channel."""
+        msg = format_pre_market_report_message(report)
         return await self.send_message(msg)
 
 

@@ -48,14 +48,17 @@ async def run_pre_market_report_generation() -> Dict[str, Any]:
     """
     Synthesizes the Indian market pre-open report before 09:15 NSE market open.
     """
+    from app.services.reports.pre_market import pre_market_report_generator
+
     start_time = time.time()
-    logger.info("Generating daily Indian market pre-open intelligence report...")
+    logger.info("Executing daily Indian market pre-open intelligence report synthesis...")
+
+    result = await pre_market_report_generator.generate_daily_report()
+
     duration_ms = round((time.time() - start_time) * 1000, 2)
-    return {
-        "status": "success",
-        "duration_ms": duration_ms,
-        "report_generated_for": datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    }
+    result["duration_ms"] = duration_ms
+    logger.info(f"Pre-market report completed in {duration_ms}ms (Report #{result.get('report_id')})")
+    return result
 
 
 async def run_prediction_evaluation_cycle() -> Dict[str, Any]:

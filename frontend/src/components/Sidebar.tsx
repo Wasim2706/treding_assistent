@@ -12,10 +12,12 @@ import {
   BarChart3,
   Sliders,
   ShieldAlert,
+  FileText,
 } from "lucide-react";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/reports", label: "Pre-Market Report", icon: FileText },
   { href: "/news", label: "News Feed", icon: Newspaper },
   { href: "/signals", label: "Signal Engine", icon: Compass },
   { href: "/watchlist", label: "Watchlist", icon: BookmarkCheck },
