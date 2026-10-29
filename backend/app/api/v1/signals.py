@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 
 from app.core.database import get_db
+from app.core.security import verify_api_key
 from app.models.signal import Signal
 from app.schemas.signal import SignalRead, SignalGenerateRequest
 from app.schemas.common import PaginatedResponse, APIResponse
@@ -66,7 +67,7 @@ async def get_top_signals(limit: int = Query(5, ge=1, le=20), db: AsyncSession =
     )
 
 
-@router.post("/generate", response_model=APIResponse[dict])
+@router.post("/generate", response_model=APIResponse[dict], dependencies=[Depends(verify_api_key)])
 async def trigger_signal_generation(
     request: Optional[SignalGenerateRequest] = Body(None),
     db: AsyncSession = Depends(get_db)

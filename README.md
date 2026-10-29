@@ -175,12 +175,18 @@ Trading Asistent/
   - Automated post-market outcome evaluation measuring directional accuracy, win rate, and Brier calibration score
   - Rolling strategy backtesting across historical OHLCV daily candles with zero look-ahead bias
   - Comprehensive KPI ribbon, confidence calibration comparison buckets, and sector accuracy breakdown
-- [x] **Phase 9: Render Deployment & Docker Multi-Container Architecture** *(Current Release)*
+- [x] **Phase 9: Render Deployment & Docker Multi-Container Architecture**
   - Render Blueprint specification (`render.yaml`) orchestrating 5 services & managed PostgreSQL 16
   - Production-hardened Dockerfiles (`Dockerfile.backend`, `Dockerfile.worker`, `Dockerfile.frontend`) with non-root security and healthcheck probes
   - `docker-compose.yml` orchestrating local PostgreSQL, Redis, Backend, Worker, and Next.js frontend
   - Standalone cron runner scripts in `backend/scripts/` (`run_pre_market.py`, `run_evaluation.py`, `run_worker.py`)
-- [ ] **Phase 10: Security Hardening & Cost Optimization**
+- [x] **Phase 10: Security Hardening & Cost Optimization** *(Production Ready)*
+  - API authentication on all mutating endpoints supporting `X-API-Key` and `Authorization: Bearer <key>` with constant-time comparison
+  - Sliding-window in-memory Rate Limiting middleware (120 req/min for reads, 30 req/min for mutations) with HTTP 429 and `Retry-After` headers
+  - Strict daily AI budget cap ($5.00/day default) with automated deterministic fallback when budget is reached
+  - Algorithmic trading safety: strict response headers (`X-Trading-Safety: ENFORCED_NON_GUARANTEED`) and defensive sanitization blocking prohibited guarantee claims
+  - Interactive Security & AI Budget dashboard in Next.js Settings UI (`/settings`)
+  - Full 136-test automated verification suite (100% pass rate)
 
 ---
 

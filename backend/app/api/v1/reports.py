@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 
 from app.core.database import get_db
+from app.core.security import verify_api_key
 from app.models.report import DailyReport, Alert
 from app.schemas.report import DailyReportRead, AlertRead
 from app.schemas.common import APIResponse, PaginatedResponse
@@ -58,7 +59,7 @@ async def list_recent_alerts(limit: int = Query(20, ge=1, le=100), db: AsyncSess
     return APIResponse(data=alerts, message=f"Retrieved {len(alerts)} alerts")
 
 
-@router.post("/pre-market/generate", response_model=APIResponse[dict])
+@router.post("/pre-market/generate", response_model=APIResponse[dict], dependencies=[Depends(verify_api_key)])
 async def trigger_pre_market_report():
     """Triggers generation of the Indian market pre-open report."""
     from app.workers.tasks import run_pre_market_report_generation

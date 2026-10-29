@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 
 from app.core.database import get_db
+from app.core.security import verify_api_key
 from app.models.prediction import PredictionResult
 from app.schemas.system import PredictionEvaluationRead
 from app.schemas.common import APIResponse, PaginatedResponse
@@ -58,7 +59,7 @@ async def get_prediction_summary(db: AsyncSession = Depends(get_db)):
     )
 
 
-@router.post("/evaluate", response_model=APIResponse[dict])
+@router.post("/evaluate", response_model=APIResponse[dict], dependencies=[Depends(verify_api_key)])
 async def trigger_prediction_evaluation(
     force_all: bool = Query(False, description="Evaluate all pending predictions regardless of due timestamp"),
     db: AsyncSession = Depends(get_db)
@@ -69,7 +70,7 @@ async def trigger_prediction_evaluation(
     return APIResponse(data=result, message="Prediction evaluation cycle executed successfully.")
 
 
-@router.post("/backtest", response_model=APIResponse[dict])
+@router.post("/backtest", response_model=APIResponse[dict], dependencies=[Depends(verify_api_key)])
 async def trigger_historical_backtest(
     symbols: Optional[str] = Query(None, description="Comma-separated stock symbols to backtest"),
     period_days: int = Query(60, ge=10, le=365, description="Lookback window in days"),

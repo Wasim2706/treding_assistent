@@ -6,6 +6,7 @@ from sqlalchemy import text
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.security import get_standard_disclaimer
+from app.services.ai.cost_control import get_today_ai_spend_usd
 from app.schemas.system import HealthStatus, ReadinessStatus, MetricsStatus
 from app.schemas.common import DisclaimerResponse
 
@@ -78,6 +79,7 @@ async def get_metrics(db: AsyncSession = Depends(get_db)):
     paper_trades = await count_table("paper_trades")
     reports_total = await count_table("daily_reports")
     api_calls = await count_table("api_usage")
+    ai_spend = await get_today_ai_spend_usd()
 
     return MetricsStatus(
         uptime_seconds=round(uptime, 2),
@@ -86,7 +88,7 @@ async def get_metrics(db: AsyncSession = Depends(get_db)):
         paper_trades_active=paper_trades,
         daily_reports_generated=reports_total,
         api_calls_count=api_calls,
-        estimated_ai_cost_usd=0.0,
+        estimated_ai_cost_usd=round(ai_spend, 4),
         timestamp=datetime.now(timezone.utc)
     )
 

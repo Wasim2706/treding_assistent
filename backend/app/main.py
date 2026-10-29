@@ -15,6 +15,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from app.core.config import settings
 from app.core.logging import logger
 from app.core.database import init_db
+from app.core.rate_limit import RateLimitMiddleware
 from app.api.router import api_router
 from app.workers.scheduler import start_scheduler, stop_scheduler
 
@@ -27,6 +28,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         response.headers["X-Trading-Mode"] = "PAPER_TRADING_ONLY"
+        response.headers["X-Trading-Safety"] = "ENFORCED_NON_GUARANTEED"
         return response
 
 
@@ -99,8 +101,9 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # Security & Logging Middlewares
+    # Security, Rate Limiting & Logging Middlewares
     app.add_middleware(SecurityHeadersMiddleware)
+    app.add_middleware(RateLimitMiddleware)
     app.add_middleware(RequestLoggingMiddleware)
 
     # Mount API Routers

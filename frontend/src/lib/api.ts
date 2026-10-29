@@ -9,13 +9,29 @@ function getBaseUrl(): string {
 
 const BASE_URL = getBaseUrl();
 
+function getAuthHeader(): Record<string, string> {
+  if (typeof window !== "undefined") {
+    const stored = localStorage.getItem("trading_admin_api_key");
+    if (stored && stored.trim()) {
+      return { "X-API-Key": stored.trim() };
+    }
+  }
+  const envKey = process.env.NEXT_PUBLIC_ADMIN_API_KEY;
+  if (envKey && envKey.trim()) {
+    return { "X-API-Key": envKey.trim() };
+  }
+  return {};
+}
+
 async function fetchJson<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `${BASE_URL}${endpoint}`;
   try {
+    const authHeaders = getAuthHeader();
     const res = await fetch(url, {
       ...options,
       headers: {
         "Content-Type": "application/json",
+        ...authHeaders,
         ...options.headers,
       },
       next: { revalidate: 10 },
@@ -78,6 +94,7 @@ export const api = {
   },
   
   getSettings: () => fetchJson<any>("/api/v1/settings"),
+  getSecurityStatus: () => fetchJson<any>("/api/v1/settings/security"),
   updateWeights: (weights: any) => 
     fetchJson<any>("/api/v1/settings/weights", { method: "PUT", body: JSON.stringify(weights) }),
 };

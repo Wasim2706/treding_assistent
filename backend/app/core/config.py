@@ -18,7 +18,14 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     API_PREFIX: str = "/api/v1"
     SECRET_KEY: str = "dev-insecure-secret-key-change-in-production-12345"
+    ADMIN_API_KEY: str = ""  # If set or in production, required for mutating endpoints
+    REQUIRE_AUTH_FOR_MUTATIONS: bool = False  # Set True to enforce API key check in all environments
     ALLOWED_ORIGINS: List[str] = ["http://localhost:3000", "http://127.0.0.1:3000", "*"]
+
+    # Rate Limiting Configuration
+    RATE_LIMIT_ENABLED: bool = True
+    RATE_LIMIT_PER_MINUTE: int = 120            # General read endpoints limit
+    RATE_LIMIT_MUTATION_PER_MINUTE: int = 30     # Mutating / heavy operations limit
 
     # TRADING SAFETY - STRICTLY ENFORCED
     PAPER_TRADING_ONLY: bool = True

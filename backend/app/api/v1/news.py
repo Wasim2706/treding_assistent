@@ -5,6 +5,7 @@ from sqlalchemy import select, desc
 from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
+from app.core.security import verify_api_key
 from app.models.news import NewsArticle, NewsAnalysis
 from app.schemas.news import NewsArticleRead
 from app.schemas.common import PaginatedResponse, APIResponse
@@ -72,7 +73,7 @@ async def get_article_detail(article_id: int, db: AsyncSession = Depends(get_db)
     return APIResponse(data=article, message="Article retrieved successfully")
 
 
-@router.post("/refresh", response_model=APIResponse[dict])
+@router.post("/refresh", response_model=APIResponse[dict], dependencies=[Depends(verify_api_key)])
 async def trigger_news_refresh():
     """
     Manually triggers the 5-minute news collection and intelligence cycle.

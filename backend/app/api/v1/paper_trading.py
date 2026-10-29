@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 
 from app.core.database import get_db
+from app.core.security import verify_api_key
 from app.models.paper_trading import PaperTrade
 from app.schemas.paper_trading import PaperTradeCreate, PaperTradeRead, PaperTradingMetrics
 from app.schemas.common import APIResponse, PaginatedResponse
@@ -58,7 +59,7 @@ async def get_paper_metrics(db: AsyncSession = Depends(get_db)):
     return APIResponse(data=metrics, message="Calculated paper trading performance metrics")
 
 
-@router.post("/open", response_model=APIResponse[PaperTradeRead])
+@router.post("/open", response_model=APIResponse[PaperTradeRead], dependencies=[Depends(verify_api_key)])
 async def open_virtual_trade(trade: PaperTradeCreate, db: AsyncSession = Depends(get_db)):
     """Opens a virtual position in Paper Trading mode."""
     new_trade = await paper_trading_engine.open_manual_trade(
@@ -75,7 +76,7 @@ async def open_virtual_trade(trade: PaperTradeCreate, db: AsyncSession = Depends
     return APIResponse(data=new_trade, message="Virtual paper position opened.")
 
 
-@router.post("/execute-signal/{signal_id}", response_model=APIResponse[PaperTradeRead])
+@router.post("/execute-signal/{signal_id}", response_model=APIResponse[PaperTradeRead], dependencies=[Depends(verify_api_key)])
 async def execute_signal_as_paper_trade(signal_id: int, db: AsyncSession = Depends(get_db)):
     """Automatically sizes and opens a virtual paper position from an actionable Signal."""
     try:
@@ -85,7 +86,7 @@ async def execute_signal_as_paper_trade(signal_id: int, db: AsyncSession = Depen
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
-@router.post("/close/{trade_id}", response_model=APIResponse[PaperTradeRead])
+@router.post("/close/{trade_id}", response_model=APIResponse[PaperTradeRead], dependencies=[Depends(verify_api_key)])
 async def close_paper_trade(
     trade_id: int,
     exit_price: Optional[float] = Query(None),
@@ -105,7 +106,7 @@ async def close_paper_trade(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
-@router.post("/update-positions", response_model=APIResponse[dict])
+@router.post("/update-positions", response_model=APIResponse[dict], dependencies=[Depends(verify_api_key)])
 async def update_active_positions(
     force_eod: bool = Query(False),
     db: AsyncSession = Depends(get_db)

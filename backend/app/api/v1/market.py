@@ -5,6 +5,7 @@ from sqlalchemy import select, desc
 from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
+from app.core.security import verify_api_key
 from app.models.market import Stock, Sector, MarketDataSnapshot
 from app.schemas.market import StockRead, SectorRead, MarketSnapshotRead
 from app.schemas.common import APIResponse
@@ -87,7 +88,7 @@ async def get_latest_market_snapshot(symbol: str, db: AsyncSession = Depends(get
     return APIResponse(data=snapshot, message=f"Market snapshot for {clean}")
 
 
-@router.post("/snapshot/{symbol}", response_model=APIResponse[MarketSnapshotRead])
+@router.post("/snapshot/{symbol}", response_model=APIResponse[MarketSnapshotRead], dependencies=[Depends(verify_api_key)])
 async def create_market_snapshot(symbol: str, db: AsyncSession = Depends(get_db)):
     """Triggers an on-demand market data fetch and technical calculation, saving snapshot to DB."""
     clean = clean_ticker(symbol)
@@ -95,7 +96,7 @@ async def create_market_snapshot(symbol: str, db: AsyncSession = Depends(get_db)
     return APIResponse(data=snapshot, message=f"Market snapshot refreshed and stored for {clean}")
 
 
-@router.post("/refresh-all", response_model=APIResponse[Dict[str, Any]])
+@router.post("/refresh-all", response_model=APIResponse[Dict[str, Any]], dependencies=[Depends(verify_api_key)])
 async def refresh_all_snapshots(db: AsyncSession = Depends(get_db)):
     """Refreshes market data and technical indicators for all active stocks."""
     count = await market_data_service.refresh_all_snapshots(db)

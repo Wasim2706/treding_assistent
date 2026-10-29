@@ -132,8 +132,12 @@ class OpenAIAnalyzer:
             logger.debug(f"AI Cache Hit for fingerprint {article.fingerprint[:12]}")
             return self._cache[article.fingerprint]
 
-        # 2. Check credentials; if missing, use resilient fallback
-        if not self.is_configured:
+        # 2. Check credentials & daily budget; if missing or exhausted, use deterministic fallback
+        from app.services.ai.cost_control import is_ai_budget_available
+        budget_ok = await is_ai_budget_available()
+        if not self.is_configured or not budget_ok:
+            if not budget_ok:
+                logger.info(f"AI daily budget limit reached (${settings.DAILY_AI_BUDGET_USD}). Using deterministic analyzer.")
             result = self._generate_deterministic_analysis(article)
             self._cache[article.fingerprint] = result
             return result
