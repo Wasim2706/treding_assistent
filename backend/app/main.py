@@ -113,6 +113,18 @@ def create_app() -> FastAPI:
     from app.api.v1.health import router as root_health_router
     app.include_router(root_health_router, prefix="")
 
+    @app.get("/", tags=["Health & System"])
+    async def root_index():
+        return {
+            "app": settings.APP_NAME,
+            "version": settings.APP_VERSION,
+            "status": "online",
+            "mode": "PAPER_TRADING_ONLY",
+            "docs_url": "/docs",
+            "health_check": "/health",
+            "regulatory_disclaimer": settings.REGULATORY_DISCLAIMER
+        }
+
     return app
 
 
