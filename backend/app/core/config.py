@@ -86,5 +86,8 @@ class Settings(BaseSettings):
     NSE_MARKET_OPEN: str = "09:15"          # IST
     NSE_MARKET_CLOSE: str = "15:30"         # IST
 
+    # Background Worker Execution Control
+    ENABLE_SCHEDULER: bool = True           # Set False when worker is deployed as separate process
+
 
 settings = Settings()

@@ -1,11 +1,11 @@
 services:
-  # 1. FastAPI Web Service
+  # 1. FastAPI Web Service (REST API & Health Probes)
   - type: web
     name: indian-trading-backend
     env: python
     region: oregon
-    plan: standard
-    buildCommand: "pip install -r backend/requirements.txt greenlet"
+    plan: starter
+    buildCommand: "pip install -r backend/requirements.txt"
     startCommand: "cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT"
     healthCheckPath: /health
     envVars:
@@ -14,6 +14,8 @@ services:
       - key: PAPER_TRADING_ONLY
         value: "true"
       - key: REAL_ORDERS_ENABLED
+        value: "false"
+      - key: ENABLE_SCHEDULER
         value: "false"
       - key: DATABASE_URL
         fromDatabase:
@@ -27,6 +29,8 @@ services:
         sync: false
       - key: TELEGRAM_CHAT_ID
         sync: false
+      - key: TELEGRAM_ALERTS_ENABLED
+        value: "true"
 
   # 2. Persistent Background Worker (5-minute cycle & intelligence)
   - type: worker
@@ -34,12 +38,16 @@ services:
     env: python
     region: oregon
     plan: starter
-    buildCommand: "pip install -r backend/requirements.txt greenlet"
-    startCommand: "cd backend && python -m app.workers.scheduler"
+    buildCommand: "pip install -r backend/requirements.txt"
+    startCommand: "cd backend && python scripts/run_worker.py"
     envVars:
       - key: ENVIRONMENT
         value: production
       - key: PAPER_TRADING_ONLY
+        value: "true"
+      - key: REAL_ORDERS_ENABLED
+        value: "false"
+      - key: ENABLE_SCHEDULER
         value: "true"
       - key: DATABASE_URL
         fromDatabase:
@@ -53,8 +61,10 @@ services:
         sync: false
       - key: TELEGRAM_CHAT_ID
         sync: false
+      - key: TELEGRAM_ALERTS_ENABLED
+        value: "true"
 
-  # 3. Next.js Web Dashboard
+  # 3. Next.js Web Dashboard (Financial Terminal UI)
   - type: web
     name: indian-trading-dashboard
     env: node
@@ -69,17 +79,21 @@ services:
           type: web
           property: host
 
-  # 4. Render Cron Job (Indian Pre-Market Report at 08:30 IST / 03:00 UTC)
+  # 4. Render Cron Job (Indian Pre-Market Report at 08:30 IST / 03:00 UTC Mon-Fri)
   - type: cron
     name: daily-indian-premarket-report
     env: python
     region: oregon
     schedule: "0 3 * * 1-5"
-    buildCommand: "pip install -r backend/requirements.txt greenlet"
-    startCommand: "cd backend && python -c 'import asyncio; from app.workers.tasks import run_pre_market_report_generation; asyncio.run(run_pre_market_report_generation())'"
+    buildCommand: "pip install -r backend/requirements.txt"
+    startCommand: "cd backend && python scripts/run_pre_market.py"
     envVars:
       - key: ENVIRONMENT
         value: production
+      - key: PAPER_TRADING_ONLY
+        value: "true"
+      - key: REAL_ORDERS_ENABLED
+        value: "false"
       - key: DATABASE_URL
         fromDatabase:
           name: indian-trading-postgres
@@ -90,9 +104,37 @@ services:
         sync: false
       - key: TELEGRAM_CHAT_ID
         sync: false
+      - key: TELEGRAM_ALERTS_ENABLED
+        value: "true"
+
+  # 5. Render Cron Job (Post-Market Prediction Evaluation at 16:00 IST / 10:30 UTC Mon-Fri)
+  - type: cron
+    name: daily-indian-postmarket-eval
+    env: python
+    region: oregon
+    schedule: "30 10 * * 1-5"
+    buildCommand: "pip install -r backend/requirements.txt"
+    startCommand: "cd backend && python scripts/run_evaluation.py"
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: PAPER_TRADING_ONLY
+        value: "true"
+      - key: REAL_ORDERS_ENABLED
+        value: "false"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: indian-trading-postgres
+          property: connectionString
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false
+      - key: TELEGRAM_ALERTS_ENABLED
+        value: "true"
 
 databases:
-  # Managed PostgreSQL
+  # Managed PostgreSQL 16
   - name: indian-trading-postgres
     region: oregon
     plan: starter

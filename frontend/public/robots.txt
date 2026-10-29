@@ -1,0 +1,4 @@
+# Production robots.txt for AI Trading Decision-Support Dashboard
+User-agent: *
+Disallow: /api/
+Allow: /

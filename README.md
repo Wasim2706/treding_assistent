@@ -144,30 +144,42 @@ Trading Asistent/
   - Indian market sector sensitivity matrix & NIFTY 50 seed data
   - Next.js 14 responsive trading terminal dashboard (8 responsive pages)
   - Mandatory safety rules & prohibited phrase validation engine
-- [x] **Phase 2: Modular News Engine & Deduplication** *(Current Release)*
+- [x] **Phase 2: Modular News Engine & Deduplication**
   - AbstractNewsProvider interface with RSS, NewsAPI, and Mock providers
   - Multi-feed RSS scraper (Moneycontrol, Economic Times, Livemint, Business Standard)
   - Deduplication pipeline: URL tracking parameter stripping, title token similarity (Jaccard), and SHA-256 fingerprinting
   - Section 5 News classification & Indian equity ticker extraction
   - Preliminary sentiment and market impact pre-scoring gate
-  - Automated test suite (31 tests, 100% passing)
-- [ ] **Phase 3: OpenAI Structured Analysis & Fact vs. Speculation**
-  - GPT-4o-mini structured JSON extraction with schema adherence
-  - Explicit separation of confirmed facts, interpretation, and speculation
-- [ ] **Phase 4: Market Data & Technical Indicator Pipeline**
-  - Live OHLCV, 20/50/200 SMA, 20 EMA, RSI 14, MACD, ATR, VWAP
-  - Technical confirmation gate (signals blocked without technical alignment)
-- [ ] **Phase 5: Deterministic Signal Engine & Trading Windows**
-  - Multi-factor scoring with configurable weights
-  - IST market-session aware entry/exit window calculation
-- [ ] **Phase 6: Telegram Bot Integration**
-  - Interactive bot commands (`/start`, `/report`, `/signals`, `/performance`)
-  - Threshold-gated breaking alerts (impact score >= 70)
-- [ ] **Phase 7: Pre-Market Indian Stock Market Daily Report**
-  - Automated 08:30 IST pre-open report synthesis
-- [ ] **Phase 8: Prediction Evaluation & Backtesting Engine**
-  - Directional accuracy, win rate, and Brier calibration measurement
-- [ ] **Phase 9: Render Deployment & Production CI/CD**
+- [x] **Phase 3: OpenAI Structured Analysis & Fact vs. Speculation**
+  - GPT-4o-mini structured JSON extraction with strict schema adherence
+  - Epistemic segregation of confirmed facts, market interpretation, speculation, and risk factors
+  - Token cost tracking with pre-filtering gate and $5.00 daily budget cap
+  - Deterministic fallback when OpenAI API is unavailable or budget is reached
+- [x] **Phase 4: Market Data & Technical Indicator Pipeline**
+  - Live and historical OHLCV feeds with NSE session status logic (Pre-open, Regular, Opening Volatility, Roll-over, Post-close)
+  - Pure NumPy/Pandas indicators: 20/50/200 SMA, 20 EMA, RSI 14, MACD (12, 26, 9), ATR 14, VWAP, Volume surge ratio, Classic & Camarilla Pivots
+  - Technical confirmation gate: signals strictly blocked without technical alignment ("Never trade on news alone")
+- [x] **Phase 5: Deterministic Signal Engine & Paper Trading Simulation**
+  - Multi-factor scoring: News (35%), Technicals (30%), Volume (15%), Market Trend (10%), Sector Sensitivity (10%)
+  - Dynamic entry zones, ATR stop loss, Target 1 (1.5x risk) and Target 2 (2.5x risk)
+  - Execution windows: opening volatility buffer (09:15-09:30), intraday square-off cutoff (15:15 IST)
+  - Paper trading simulation: 2% capital risk position sizing, trailing stop to breakeven at Target 1, MAE/MFE tracking
+- [x] **Phase 6: Telegram Bot Integration & Threshold-Gated Alerts**
+  - Interactive bot commands: `/start`, `/help`, `/status`, `/news`, `/top`, `/signals`, `/watchlist`, `/performance`, `/papertrade`, `/report`
+  - Breaking news alert threshold: impact score >= 70
+  - High-conviction signal alert threshold: composite score >= 70
+- [x] **Phase 7: Pre-Market Indian Stock Market Daily Report**
+  - Automated 08:30 IST (03:00 UTC) report generator synthesizing: Global Overnight Summary, Top Catalysts (Facts vs. Speculation), NIFTY 50 / BANK NIFTY pivot levels & expected open, High-Conviction Watchlist (3-5 stocks), No-Trade Watchlist (2-4 stocks), and Actionable Risk Warnings
+  - Dedicated `/reports` dashboard page with interactive JSON inspection and Telegram broadcast
+- [x] **Phase 8: Prediction Evaluation & Backtesting Engine**
+  - Automated post-market outcome evaluation measuring directional accuracy, win rate, and Brier calibration score
+  - Rolling strategy backtesting across historical OHLCV daily candles with zero look-ahead bias
+  - Comprehensive KPI ribbon, confidence calibration comparison buckets, and sector accuracy breakdown
+- [x] **Phase 9: Render Deployment & Docker Multi-Container Architecture** *(Current Release)*
+  - Render Blueprint specification (`render.yaml`) orchestrating 5 services & managed PostgreSQL 16
+  - Production-hardened Dockerfiles (`Dockerfile.backend`, `Dockerfile.worker`, `Dockerfile.frontend`) with non-root security and healthcheck probes
+  - `docker-compose.yml` orchestrating local PostgreSQL, Redis, Backend, Worker, and Next.js frontend
+  - Standalone cron runner scripts in `backend/scripts/` (`run_pre_market.py`, `run_evaluation.py`, `run_worker.py`)
 - [ ] **Phase 10: Security Hardening & Cost Optimization**
 
 ---
@@ -179,63 +191,132 @@ Trading Asistent/
 - Node.js 18+ or 20+ (with npm)
 - Git
 
-### 2. Windows Setup Instructions
+### 2. Windows Local Setup
 
 Open PowerShell in the project directory:
 
 ```powershell
-# 1. Clone repository
-git clone <repository_url>
-cd "Trading Asistent"
-
-# 2. Setup Python Virtual Environment
+# 1. Setup Python Virtual Environment
 py -m venv venv
 .\venv\Scripts\Activate.ps1
 
-# 3. Install Python Dependencies
-pip install -r backend/requirements.txt greenlet
+# 2. Install Python Dependencies
+pip install -r backend/requirements.txt
 
-# 4. Copy Environment Template
+# 3. Copy Environment Template
 Copy-Item .env.example .env
 
-# 5. Run Backend Pytest Suite
-python -m pytest backend/tests -v
+# 4. Run Backend Pytest Suite (123 tests)
+.\venv\Scripts\python.exe -m pytest backend/tests -v
 
-# 6. Start FastAPI Backend (Runs at http://127.0.0.1:8000)
-python backend/run.py
+# 5. Start FastAPI Backend (Runs at http://127.0.0.1:8000)
+.\venv\Scripts\python.exe backend/run.py
 ```
 
 In a second PowerShell window, launch the Next.js frontend:
 
 ```powershell
-cd "Trading Asistent\frontend"
+cd frontend
 npm install
 npm run dev
 # Dashboard opens at http://localhost:3000
 ```
 
-### 3. Linux / macOS Setup Instructions
+### 3. Docker Compose Local Multi-Container Deployment
+
+Run the complete multi-service stack (Database, Cache, API Backend, Background Worker, and Frontend) locally with one command:
 
 ```bash
-# 1. Clone and enter directory
-git clone <repository_url> && cd "Trading Asistent"
-
-# 2. Setup Virtual Environment
-python3 -m venv venv
-source venv/bin/activate
-
-# 3. Install Dependencies
-pip install -r backend/requirements.txt greenlet
+# 1. Configure environment variables
 cp .env.example .env
 
-# 4. Run Pytest Suite
-pytest backend/tests -v
+# 2. Start all services in detached mode
+docker compose up -d --build
 
-# 5. Run Backend
-python backend/run.py &
+# 3. View running container logs
+docker compose logs -f
 
-# 6. Run Frontend
-cd frontend && npm install && npm run dev
+# 4. Check service status
+docker compose ps
+```
+
+The stack exposes:
+- **Next.js Financial Dashboard**: `http://localhost:3000`
+- **FastAPI Backend & Swagger Docs**: `http://localhost:8000/docs`
+- **Health Probe**: `http://localhost:8000/health`
+- **PostgreSQL Database**: `localhost:5432`
+- **Redis Cache**: `localhost:6379`
+
+To stop the containers:
+```bash
+docker compose down
+```
+
+---
+
+## Render Cloud Deployment Guide (1-Click Blueprint)
+
+The application includes a production-grade Infrastructure-as-Code Blueprint (`render.yaml`) ready for automated deployment on [Render](https://render.com).
+
+### Architecture on Render
+
+```mermaid
+flowchart TD
+    subgraph RenderCloud [Render Managed Cloud]
+        DB[(PostgreSQL 16: indian-trading-postgres)]
+        API[Web Service: indian-trading-backend]
+        WORKER[Worker Service: indian-trading-worker]
+        DASH[Web Service: indian-trading-dashboard]
+        CRON1[Cron Job: daily-indian-premarket-report 08:30 IST]
+        CRON2[Cron Job: daily-indian-postmarket-eval 16:00 IST]
+
+        DB <--> API
+        DB <--> WORKER
+        DB <--> CRON1
+        DB <--> CRON2
+        API <--> DASH
+    end
+    TG[Telegram Channel / User]
+    API --> TG
+    WORKER --> TG
+    CRON1 --> TG
+```
+
+### 1-Click Deployment Steps
+
+1. **Fork or Push** this repository to your GitHub or GitLab account.
+2. Sign in to your **Render Dashboard** (`dashboard.render.com`).
+3. Click **New +** > **Blueprint**.
+4. Connect your repository and select the `master` (or `main`) branch.
+5. Render will automatically detect `render.yaml` and configure:
+   - **`indian-trading-postgres`**: Managed PostgreSQL 16 database.
+   - **`indian-trading-backend`**: FastAPI Web Service with `/health` probe.
+   - **`indian-trading-worker`**: Persistent background worker running 5-minute news ingestion & signal updates.
+   - **`indian-trading-dashboard`**: Next.js 14 App Router web service.
+   - **`daily-indian-premarket-report`**: Cron job at 08:30 IST (03:00 UTC) Mon-Fri.
+   - **`daily-indian-postmarket-eval`**: Cron job at 16:00 IST (10:30 UTC) Mon-Fri.
+6. Provide the secret environment variables in the Render Blueprint UI:
+   - `OPENAI_API_KEY`: Your OpenAI API key for structured analysis.
+   - `TELEGRAM_BOT_TOKEN`: Your Telegram Bot token from `@BotFather`.
+   - `TELEGRAM_CHAT_ID`: Your Telegram group/channel/user ID.
+   - `NEWS_API_KEY`: *(Optional)* NewsAPI key (RSS feeds operate without an API key).
+7. Click **Apply**. Render will provision all resources, run database migrations and seeding, and output the live dashboard URL!
+
+---
+
+## Standalone CLI Scripts
+
+For manual execution or custom cron triggers, standalone CLI scripts are provided in `backend/scripts/`:
+
+```bash
+# Generate Pre-Market Indian Stock Market Report immediately
+python backend/scripts/run_pre_market.py
+
+# Evaluate prediction calibration and settlement outcomes immediately
+python backend/scripts/run_evaluation.py
+
+# Run standalone background worker service
+python backend/scripts/run_worker.py
 ```
 
 ---

@@ -4,7 +4,9 @@ WORKDIR /app
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PAPER_TRADING_ONLY=true
+    PAPER_TRADING_ONLY=true \
+    REAL_ORDERS_ENABLED=false \
+    ENABLE_SCHEDULER=true
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
@@ -12,8 +14,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY backend/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt greenlet
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
 COPY backend/ /app/
 
-CMD ["python", "-m", "app.workers.scheduler"]
+# Security: run as non-root user
+RUN useradd -m -u 1000 appuser && \
+    chown -R appuser:appuser /app
+USER appuser
+
+CMD ["python", "scripts/run_worker.py"]

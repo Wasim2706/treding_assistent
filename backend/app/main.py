@@ -63,14 +63,18 @@ async def lifespan(app: FastAPI):
     # 1. Initialize DB and Seed Data
     await init_db()
 
-    # 2. Start Background Scheduler (in web worker mode)
-    if settings.ENVIRONMENT != "testing":
+    # 2. Start Background Scheduler (if enabled and not in test suite)
+    if settings.ENVIRONMENT != "testing" and settings.ENABLE_SCHEDULER:
+        logger.info("Starting integrated background scheduler...")
         await start_scheduler()
+    else:
+        logger.info("Integrated background scheduler disabled (standalone worker mode or test environment).")
 
     yield
 
     logger.info("Gracefully shutting down services...")
-    await stop_scheduler()
+    if settings.ENABLE_SCHEDULER:
+        await stop_scheduler()
 
 
 def create_app() -> FastAPI:
