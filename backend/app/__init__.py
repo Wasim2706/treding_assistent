@@ -10,3 +10,6 @@ if _BACKEND_DIR not in sys.path:
     sys.path.insert(0, _BACKEND_DIR)
 
 __version__ = "1.0.0"
+
+# Expose 'app' directly on the package so 'gunicorn app:app' or 'getattr(mod, "app")' always succeeds!
+from app.main import app
