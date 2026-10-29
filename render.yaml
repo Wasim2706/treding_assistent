@@ -5,8 +5,8 @@ services:
     env: python
     region: oregon
     plan: starter
-    buildCommand: "pip install -r backend/requirements.txt"
-    startCommand: "cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    buildCommand: "python -m pip install -r backend/requirements.txt"
+    startCommand: "python run.py"
     healthCheckPath: /health
     envVars:
       - key: ENVIRONMENT
@@ -38,8 +38,8 @@ services:
     env: python
     region: oregon
     plan: starter
-    buildCommand: "pip install -r backend/requirements.txt"
-    startCommand: "cd backend && python scripts/run_worker.py"
+    buildCommand: "python -m pip install -r backend/requirements.txt"
+    startCommand: "python backend/scripts/run_worker.py"
     envVars:
       - key: ENVIRONMENT
         value: production
@@ -85,8 +85,8 @@ services:
     env: python
     region: oregon
     schedule: "0 3 * * 1-5"
-    buildCommand: "pip install -r backend/requirements.txt"
-    startCommand: "cd backend && python scripts/run_pre_market.py"
+    buildCommand: "python -m pip install -r backend/requirements.txt"
+    startCommand: "python backend/scripts/run_pre_market.py"
     envVars:
       - key: ENVIRONMENT
         value: production
@@ -113,8 +113,8 @@ services:
     env: python
     region: oregon
     schedule: "30 10 * * 1-5"
-    buildCommand: "pip install -r backend/requirements.txt"
-    startCommand: "cd backend && python scripts/run_evaluation.py"
+    buildCommand: "python -m pip install -r backend/requirements.txt"
+    startCommand: "python backend/scripts/run_evaluation.py"
     envVars:
       - key: ENVIRONMENT
         value: production
