@@ -214,6 +214,13 @@ class SignalGenerator:
         await db.commit()
         await db.refresh(signal)
 
+        # Register prediction for post-market directional evaluation
+        try:
+            from app.services.evaluation.service import evaluation_service
+            await evaluation_service.register_prediction_for_signal(signal, db)
+        except Exception as e:
+            logger.debug(f"Failed to register prediction for signal #{signal.id}: {e}")
+
         if signal.direction in ("BUY", "SELL") and signal.composite_score >= 70.0:
             try:
                 from app.services.telegram.bot import telegram_bot_service

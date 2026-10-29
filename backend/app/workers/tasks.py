@@ -65,11 +65,18 @@ async def run_prediction_evaluation_cycle() -> Dict[str, Any]:
     """
     Compares past predictions against actual price movement to evaluate calibration and accuracy.
     """
+    from app.services.evaluation.service import evaluation_service
+
     start_time = time.time()
-    logger.info("Evaluating past prediction outcomes...")
+    logger.info("Executing post-market prediction outcome evaluation and calibration cycle...")
+
+    async with AsyncSessionLocal() as db:
+        result = await evaluation_service.evaluate_pending_predictions(db, force_all=False)
+
     duration_ms = round((time.time() - start_time) * 1000, 2)
-    return {
-        "status": "success",
-        "duration_ms": duration_ms,
-        "predictions_evaluated": 0
-    }
+    result["duration_ms"] = duration_ms
+    logger.info(
+        f"Prediction evaluation complete: {result.get('evaluated_count', 0)} evaluated, "
+        f"{result.get('correct_count', 0)} correct ({result.get('accuracy_pct', 0)}%) in {duration_ms}ms"
+    )
+    return result

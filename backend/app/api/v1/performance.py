@@ -49,26 +49,37 @@ async def list_prediction_evaluations(
 
 @router.get("/summary", response_model=APIResponse[dict])
 async def get_prediction_summary(db: AsyncSession = Depends(get_db)):
-    """Summary metrics: Directional accuracy, precision, Brier calibration score."""
-    res = await db.execute(select(PredictionResult).where(PredictionResult.is_evaluated == True))
-    evaluated = res.scalars().all()
-
-    total_evaluated = len(evaluated)
-    correct_direction = sum(1 for p in evaluated if p.is_direction_correct is True)
-    directional_accuracy = (correct_direction / total_evaluated * 100) if total_evaluated > 0 else 0.0
-
-    avg_return = (
-        sum(p.actual_price_change_pct for p in evaluated if p.actual_price_change_pct is not None) / total_evaluated
-    ) if total_evaluated > 0 else 0.0
-
+    """Summary metrics: Directional accuracy, precision, Brier calibration score, and sector breakdown."""
+    from app.services.evaluation.service import evaluation_service
+    summary = await evaluation_service.get_performance_summary(db)
     return APIResponse(
-        data={
-            "total_evaluated_predictions": total_evaluated,
-            "correct_direction_count": correct_direction,
-            "directional_accuracy_pct": round(directional_accuracy, 2),
-            "average_return_pct": round(avg_return, 2),
-            "calibration_status": "Active verification ongoing" if total_evaluated < 30 else "Calibrated",
-            "evaluation_notice": "Evaluated after 1-day/intraday horizon without look-ahead bias."
-        },
-        message="Prediction evaluation summary computed"
+        data=summary,
+        message="Prediction evaluation and calibration metrics computed successfully."
     )
+
+
+@router.post("/evaluate", response_model=APIResponse[dict])
+async def trigger_prediction_evaluation(
+    force_all: bool = Query(False, description="Evaluate all pending predictions regardless of due timestamp"),
+    db: AsyncSession = Depends(get_db)
+):
+    """Triggers verification of pending predictions against actual market quotes."""
+    from app.services.evaluation.service import evaluation_service
+    result = await evaluation_service.evaluate_pending_predictions(db, force_all=force_all)
+    return APIResponse(data=result, message="Prediction evaluation cycle executed successfully.")
+
+
+@router.post("/backtest", response_model=APIResponse[dict])
+async def trigger_historical_backtest(
+    symbols: Optional[str] = Query(None, description="Comma-separated stock symbols to backtest"),
+    period_days: int = Query(60, ge=10, le=365, description="Lookback window in days"),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Executes a strategy backtest across historical candles with rolling indicator windows
+    and zero look-ahead bias.
+    """
+    from app.services.evaluation.service import evaluation_service
+    symbol_list = [s.strip().upper() for s in symbols.split(",") if s.strip()] if symbols else None
+    result = await evaluation_service.run_historical_backtest(db, symbols=symbol_list, period_days=period_days)
+    return APIResponse(data=result, message="Historical backtesting simulation completed successfully.")

@@ -61,6 +61,12 @@ export const api = {
   
   getPredictionSummary: () => fetchJson<any>("/api/v1/performance/summary"),
   getPredictionEvaluations: (page = 1) => fetchJson<any>(`/api/v1/performance/predictions?page=${page}`),
+  triggerEvaluation: (forceAll = false) => 
+    fetchJson<any>(`/api/v1/performance/evaluate${forceAll ? "?force_all=true" : ""}`, { method: "POST" }),
+  runBacktest: (symbols?: string, periodDays = 60) => {
+    const q = symbols ? `&symbols=${symbols}` : "";
+    return fetchJson<any>(`/api/v1/performance/backtest?period_days=${periodDays}${q}`, { method: "POST" });
+  },
   
   getSettings: () => fetchJson<any>("/api/v1/settings"),
   updateWeights: (weights: any) => 

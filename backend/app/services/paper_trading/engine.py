@@ -88,6 +88,19 @@ class PaperTradingEngine:
         db.add(paper_trade)
         await db.commit()
         await db.refresh(paper_trade)
+
+        try:
+            from app.models.prediction import PredictionResult
+            pred_res = await db.execute(
+                select(PredictionResult).where(PredictionResult.signal_id == sig.id).limit(1)
+            )
+            pred = pred_res.scalars().first()
+            if pred:
+                pred.paper_trade_id = paper_trade.id
+                await db.commit()
+        except Exception:
+            pass
+
         return paper_trade
 
     async def open_manual_trade(

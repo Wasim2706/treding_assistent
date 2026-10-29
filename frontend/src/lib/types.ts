@@ -211,3 +211,72 @@ export interface SystemMetrics {
   estimated_ai_cost_usd: number;
   timestamp: string;
 }
+
+export interface PredictionSummary {
+  total_evaluated_predictions: number;
+  correct_direction_count: number;
+  directional_accuracy_pct: number;
+  brier_score: number;
+  calibration_grade: string;
+  win_rate_pct: number;
+  profit_factor: number;
+  average_return_pct: number;
+  confidence_calibration_tiers: Array<{
+    tier_label: string;
+    predicted_avg_confidence: number;
+    realized_accuracy_pct: number;
+    sample_count: number;
+  }>;
+  sector_accuracy: Array<{
+    sector: string;
+    sample_count: number;
+    accuracy_pct: number;
+  }>;
+  evaluation_notice?: string;
+}
+
+export interface PredictionResultItem {
+  id: number;
+  signal_id: number;
+  symbol: string;
+  predicted_direction: string;
+  predicted_confidence: number;
+  price_at_prediction: number;
+  evaluation_horizon: string;
+  evaluation_due_at: string;
+  evaluated_at?: string;
+  actual_price_at_eval?: number;
+  actual_price_change_pct?: number;
+  actual_direction?: string;
+  is_direction_correct?: boolean;
+  is_evaluated: boolean;
+  evaluation_notes?: string;
+}
+
+export interface BacktestResult {
+  status: string;
+  period_days: number;
+  symbols_tested: string[];
+  total_trades_simulated: number;
+  winning_trades: number;
+  losing_trades: number;
+  win_rate_pct: number;
+  profit_factor: number;
+  cumulative_return_pct: number;
+  average_trade_return_pct: number;
+  max_drawdown_pct: number;
+  brier_score: number;
+  sample_trades: Array<{
+    symbol: string;
+    date: string;
+    direction: string;
+    confidence: number;
+    entry_price: number;
+    exit_price: number;
+    return_pct: number;
+    status: string;
+    is_win: boolean;
+  }>;
+  disclaimer: string;
+}
+
