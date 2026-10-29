@@ -5,6 +5,7 @@
 [![Python](https://img.shields.io/badge/Python-3.11%20%7C%203.13-blue)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110%2B-009688)](https://fastapi.tiangolo.com)
 [![Next.js](https://img.shields.io/badge/Next.js-14%20(App%20Router)-black)](https://nextjs.org)
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Wasim2706/treding_assistent)
 
 > **IMPORTANT TRADING SAFETY NOTICE**  
 > This application operates strictly in **PAPER TRADING / SIGNAL-ONLY mode**. It does **NOT** place real trades automatically. Real order execution is permanently disabled by system architecture. Predictions and signals are probabilistic algorithmic estimates for educational decision-support only. The system **NEVER** claims guaranteed returns or 100% accuracy.
